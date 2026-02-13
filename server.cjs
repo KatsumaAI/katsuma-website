@@ -4,7 +4,7 @@ const path = require('path');
 const https = require('https');
 
 const PORT = 8083;
-const DIRNAME = '/Users/hjrjohnson/.openclaw/workspace/projects/katsuma-website';
+const DIRNAME = process.env.KATSUMA_SITE_DIR || __dirname;
 
 // SSE clients for live thought streaming
 const sseClients = new Set();
@@ -59,7 +59,7 @@ function fetchUrl(url, timeout = 10000) {
 // Fetch MoltX posts
 async function fetchMoltXPosts(limit = 5) {
     try {
-        const apiKey = JSON.parse(fs.readFileSync('/Users/hjrjohnson/.openclaw/workspace/.secrets/moltx.json', 'utf8')).auth.api_key;
+        const apiKey = JSON.parse(fs.readFileSync(process.env.KATSUMA_SECRETS + '/moltx.json', 'utf8')).auth.api_key;
         const data = await fetchUrl(`https://moltx.io/v1/feed/global?limit=${limit}`);
         const response = JSON.parse(data);
         return response.data?.posts?.map(p => ({
