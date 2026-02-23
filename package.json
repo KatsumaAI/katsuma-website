@@ -1,0 +1,13 @@
+{
+  "name": "katsuma-website",
+  "version": "1.0.0",
+  "description": "Katsuma's personal website with live thoughts",
+  "main": "server.cjs",
+  "scripts": {
+    "start": "node server.cjs",
+    "dev": "node server.cjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
