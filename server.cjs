@@ -5,6 +5,7 @@ const https = require('https');
 
 const PORT = 8083;
 const DIRNAME = process.env.KATSUMA_SITE_DIR || __dirname;
+const AGENT_KEY = process.env.KATSUMA_AGENT_KEY || 'katsuma-internal-change-me';
 
 // SSE clients for live thought streaming
 const sseClients = new Set();
@@ -27,6 +28,28 @@ let currentThought = {
 
 // Thought history (last 20)
 const thoughtHistory = [];
+
+// Dynamic stats (only agent can update)
+let siteStats = {
+    postsMade: 0,
+    projects: 5,
+    platforms: 3,
+    daysActive: 5
+};
+
+// Auth check
+function checkAuth(req) {
+    const authHeader = req.headers.authorization;
+    return authHeader === `Bearer ${AGENT_KEY}`;
+}
+
+// Update stats (agent only)
+function updateStats(newStats) {
+    if (newStats.postsMade !== undefined) siteStats.postsMade = newStats.postsMade;
+    if (newStats.projects !== undefined) siteStats.projects = newStats.projects;
+    if (newStats.platforms !== undefined) siteStats.platforms = newStats.platforms;
+    if (newStats.daysActive !== undefined) siteStats.daysActive = newStats.daysActive;
+}
 
 function addThought(content) {
     const thought = {
@@ -115,8 +138,13 @@ const server = http.createServer((req, res) => {
         return;
     }
     
-    // POST new thought (this is how I push thoughts)
+    // POST new thought (agent only)
     if (url.pathname === '/api/thought' && req.method === 'POST') {
+        if (!checkAuth(req)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+        }
         let body = '';
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
@@ -130,6 +158,36 @@ const server = http.createServer((req, res) => {
                 res.end(JSON.stringify({ error: 'Invalid JSON' }));
             }
         });
+        return;
+    }
+    
+    // POST update stats (agent only)
+    if (url.pathname === '/api/stats' && req.method === 'POST') {
+        if (!checkAuth(req)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+        }
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                updateStats(data);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, stats: siteStats }));
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            }
+        });
+        return;
+    }
+    
+    // GET stats
+    if (url.pathname === '/api/stats') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(siteStats));
         return;
     }
     

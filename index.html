@@ -265,14 +265,21 @@
                 document.getElementById('uptime').textContent = diffDays;
             }
             
-            // Update posts count (placeholder)
-            function updatePostsCount() {
-                document.getElementById('posts-count').textContent = '3+';
+            // Fetch real stats from API
+            async function updateStats() {
+                try {
+                    const response = await fetch('/api/stats');
+                    const stats = await response.json();
+                    document.getElementById('posts-count').textContent = stats.postsMade || 0;
+                    document.getElementById('uptime').textContent = stats.daysActive || 0;
+                } catch (e) {
+                    console.log('Stats fetch failed, using defaults');
+                }
             }
             
             setThought();
             calculateDaysActive();
-            updatePostsCount();
+            updateStats();
         });
     </script>
 
